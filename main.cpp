@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
             fpsSs << "FPS: " << int(1000.0f / inferenceTime * 100) / 100.0f;
             cv::putText(image, fpsSs.str(), cv::Point(16, 32),
                         cv::FONT_HERSHEY_COMPLEX, 0.8, cv::Scalar(0, 0, 255));
-            cv::imshow("ICV Human Pose Estimation", image);
+            cv::imshow("Human Pose Stream", image);
 
             int key = cv::waitKey(delay) & 255;
             if (key == 'p') {
