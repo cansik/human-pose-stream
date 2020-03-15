@@ -62,24 +62,28 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
 
 void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
     int count = 0;
+    tnyosc::Bundle bundle;
+
+    tnyosc::Message posesMsg("/poses");
+    posesMsg.append(static_cast<int>(poses.size()));
+    bundle.append(posesMsg);
+
     for (HumanPose const &pose : poses) {
         // std::cout << "Score [" << count << "]: " << pose.score << std::endl;
-        tnyosc::Message msg("/pose/");
+        tnyosc::Message msg("/pose");
 
         msg.append(count);
-        msg.append(pose.score / 100.0);
+        msg.append(pose.score / 100.0f);
 
         for (auto const &keypoint : pose.keypoints) {
             msg.append(keypoint.x / width);
             msg.append(keypoint.y / height);
         }
 
-        oscSocket.send_to(boost::asio::buffer(msg.data(), msg.size()), *iterator);
+        bundle.append(msg);
     }
-}
 
-void setupOSC() {
-
+    oscSocket.send_to(boost::asio::buffer(bundle.data(), bundle.size()), *iterator);
 }
 
 int main(int argc, char *argv[]) {
