@@ -30,6 +30,13 @@ using namespace InferenceEngine;
 using namespace human_pose_estimation;
 using boost::asio::ip::udp;
 
+// osc setup
+boost::asio::io_service io_service;
+udp::socket oscSocket(io_service, udp::endpoint(udp::v4(), 0));
+udp::resolver resolver(io_service);
+udp::resolver::query query(udp::v4(), HOST, PORT);
+udp::resolver::iterator iterator = resolver.resolve(query);
+
 bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     // ---------------------------Parsing and validation of input args--------------------------------------
 
@@ -53,12 +60,26 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     return true;
 }
 
-void sendToOsc(const std::vector<HumanPose>& poses) {
+void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
+    int count = 0;
     for (HumanPose const &pose : poses) {
+        // std::cout << "Score [" << count << "]: " << pose.score << std::endl;
+        tnyosc::Message msg("/pose/");
+
+        msg.append(count);
+        msg.append(pose.score / 100.0);
+
         for (auto const &keypoint : pose.keypoints) {
-            //rawPose << keypoint.x << "," << keypoint.y << " ";
+            msg.append(keypoint.x / width);
+            msg.append(keypoint.y / height);
         }
+
+        oscSocket.send_to(boost::asio::buffer(msg.data(), msg.size()), *iterator);
     }
+}
+
+void setupOSC() {
+
 }
 
 int main(int argc, char *argv[]) {
@@ -81,6 +102,8 @@ int main(int argc, char *argv[]) {
             if (!cap.open(FLAGS_i))
                 throw std::logic_error("Cannot open input file: " + FLAGS_i);
         }
+
+        std::cout << "Started OSC client on port [" << PORT << "]" << std::endl;
 
         int delay = 33;
         double inferenceTime = 0.0;
@@ -120,7 +143,7 @@ int main(int argc, char *argv[]) {
             }
 
             // send to osc
-            sendToOsc(poses);
+            sendToOsc(poses, image.cols, image.rows);
 
             if (FLAGS_no_show) {
                 continue;
