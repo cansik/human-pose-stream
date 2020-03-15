@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
             }
 
             // send to osc
-            sendToOsc(poses, image.cols, image.rows);
+            sendToOsc(poses, static_cast<float>(image.cols), static_cast<float>(image.rows));
 
             if (FLAGS_no_show) {
                 continue;
