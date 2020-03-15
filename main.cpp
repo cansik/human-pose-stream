@@ -19,8 +19,16 @@
 #include "human_pose_estimator.hpp"
 #include "render_human_pose.hpp"
 
+#include "tnyosc.hpp"
+#include <boost/asio.hpp>
+
+// osc settings
+#define HOST ("127.0.0.1")
+#define PORT ("7400")
+
 using namespace InferenceEngine;
 using namespace human_pose_estimation;
+using boost::asio::ip::udp;
 
 bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     // ---------------------------Parsing and validation of input args--------------------------------------
@@ -43,6 +51,14 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     }
 
     return true;
+}
+
+void sendToOsc(const std::vector<HumanPose>& poses) {
+    for (HumanPose const &pose : poses) {
+        for (auto const &keypoint : pose.keypoints) {
+            //rawPose << keypoint.x << "," << keypoint.y << " ";
+        }
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -90,6 +106,7 @@ int main(int argc, char *argv[]) {
             } else {
                 inferenceTime = inferenceTime * 0.95 + 0.05 * (t2 - t1) / cv::getTickFrequency() * 1000;
             }
+
             if (FLAGS_r) {
                 for (HumanPose const &pose : poses) {
                     std::stringstream rawPose;
@@ -101,6 +118,9 @@ int main(int argc, char *argv[]) {
                     std::cout << rawPose.str() << std::endl;
                 }
             }
+
+            // send to osc
+            sendToOsc(poses);
 
             if (FLAGS_no_show) {
                 continue;
