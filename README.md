@@ -44,6 +44,19 @@ To run the binary, place the model and weights into the same folder and run foll
 ./human_pose_stream -m 'human-pose-estimation-0001.xml' -i cam -index 1
 ```
 
+## OSC Output
+The OSC data is sent as a bundled message. The first message is the **header**, which tells how many more messages are following in the bundle (necessary for non-bundle OSC implementations). The following messages in the bundle are the different poses and their keypoints.
+
+```
+# header
+/poses poseCount:int
+
+# poses
+/pose id:int score:float x1:float y1:float x2:float y2:float ...
+```
+
+Check out the [Processing example](https://github.com/cansik/human-pose-stream/tree/master/examples/HumanPoseReceiver) provided on how to read the data.
+
 ## About
 
 The project is slightly adapted from the Human Pose example Intel provides.
