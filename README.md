@@ -41,7 +41,7 @@ The final binary should be avaiable here:
 To run the binary, place the model and weights into the same folder and run following command (with OpenVINO variables loaded).
 
 ```bash
-./human_pose_stream -m 'human-pose-estimation-0001.xml' -i cam -index 1
+./human_pose_stream -m 'human-pose-estimation-0001.xml' -i cam -index 0
 ```
 
 ## OSC Output
