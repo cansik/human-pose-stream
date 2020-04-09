@@ -10,7 +10,7 @@ The software is an adapted example by Intel's inference engine which uses the li
 
 ### Dependencies
 
-Please install following dependencies on your System:
+Please install following dependencies on your System (no Windows Support!):
 
 - [Intel OpenVINO](https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_macos.html)
 - [Boost](https://formulae.brew.sh/formula/boost)
