@@ -6,6 +6,18 @@ The software is an adapted example by Intel's inference engine which uses the li
 - Adds possibility to choose camera device
 - Adds osc output ([tnyosc](https://github.com/toshiroyamada/tnyosc))
 
+## Simple Setup
+
+A very simple way to test it out is to run the following commands:
+
+```bash
+# build and download models
+./setup.sh
+
+# let it run
+./run.sh
+```
+
 ## Build
 
 ### Dependencies
