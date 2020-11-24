@@ -39,6 +39,10 @@ udp::resolver resolver(io_service);
 udp::resolver::query query(udp::v4(), HOST, PORT);
 udp::resolver::iterator iterator = resolver.resolve(query);
 
+// realsense
+rs2::pipeline pipeline;
+bool isRealSenseMode = false;
+
 bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     // ---------------------------Parsing and validation of input args--------------------------------------
 
@@ -88,6 +92,23 @@ void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
     oscSocket.send_to(boost::asio::buffer(bundle.data(), bundle.size()), *iterator);
 }
 
+void setupRealSense() {
+    std::cout << "setting up realsense..." << std::endl;
+
+    // setting up realsense
+    pipeline.start();
+
+    rs2::frameset frames = pipeline.wait_for_frames();
+    rs2::depth_frame depth = frames.get_depth_frame();
+
+    float width = depth.get_width();
+    float height = depth.get_height();
+
+    float dist_to_center = depth.get_distance(width / 2, height / 2);
+
+    std::cout << "The camera is facing an object " << dist_to_center << " meters away" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
     try {
         std::cout << "InferenceEngine: " << GetInferenceEngineVersion() << std::endl;
@@ -104,6 +125,10 @@ int main(int argc, char *argv[]) {
             int index = std::stoi(FLAGS_index, nullptr, 0);
             if (!cap.open(index))
                 throw std::logic_error("Cannot open input camera: " + FLAGS_i + " index: " + FLAGS_index);
+        } else if (FLAGS_i == "rs") {
+            // realsense
+            setupRealSense();
+            isRealSenseMode = true;
         } else {
             if (!cap.open(FLAGS_i))
                 throw std::logic_error("Cannot open input file: " + FLAGS_i);
@@ -114,8 +139,12 @@ int main(int argc, char *argv[]) {
         int delay = 33;
         double inferenceTime = 0.0;
         cv::Mat image;
-        if (!cap.read(image)) {
-            throw std::logic_error("Failed to get frame from cv::VideoCapture");
+        if(isRealSenseMode) {
+            //todo: read realsense frame
+        } else {
+            if (!cap.read(image)) {
+                throw std::logic_error("Failed to get frame from cv::VideoCapture");
+            }
         }
         estimator.estimate(image);  // Do not measure network reshape, if it happened
 
@@ -173,7 +202,14 @@ int main(int argc, char *argv[]) {
             } else if (key == 27) {
                 break;
             }
-        } while (cap.read(image));
+
+            // read image
+            if(isRealSenseMode) {
+                // todo: read realsense frame
+            } else {
+                cap.read(image);
+            }
+        } while (true);
     }
     catch (const std::exception &error) {
         std::cerr << "[ ERROR ] " << error.what() << std::endl;
