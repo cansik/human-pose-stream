@@ -23,6 +23,7 @@
 #include <boost/asio.hpp>
 
 #include <librealsense2/rs.hpp>
+#include <librealsense2/hpp/rs_internal.hpp>
 
 // osc settings
 #define HOST ("127.0.0.1")
@@ -40,7 +41,6 @@ udp::resolver::query query(udp::v4(), HOST, PORT);
 udp::resolver::iterator iterator = resolver.resolve(query);
 
 // realsense
-rs2::pipeline pipeline;
 bool isRealSenseMode = false;
 
 bool ParseAndCheckCommandLine(int argc, char *argv[]) {
@@ -92,23 +92,6 @@ void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
     oscSocket.send_to(boost::asio::buffer(bundle.data(), bundle.size()), *iterator);
 }
 
-void setupRealSense() {
-    std::cout << "setting up realsense..." << std::endl;
-
-    // setting up realsense
-    pipeline.start();
-
-    rs2::frameset frames = pipeline.wait_for_frames();
-    rs2::depth_frame depth = frames.get_depth_frame();
-
-    float width = depth.get_width();
-    float height = depth.get_height();
-
-    float dist_to_center = depth.get_distance(width / 2, height / 2);
-
-    std::cout << "The camera is facing an object " << dist_to_center << " meters away" << std::endl;
-}
-
 int main(int argc, char *argv[]) {
     try {
         std::cout << "InferenceEngine: " << GetInferenceEngineVersion() << std::endl;
@@ -120,6 +103,8 @@ int main(int argc, char *argv[]) {
 
         HumanPoseEstimator estimator(FLAGS_m, FLAGS_d, FLAGS_pc);
         cv::VideoCapture cap;
+        rs2::context ctx;
+        rs2::pipeline pipe(ctx);
 
         if (FLAGS_i == "cam") {
             int index = std::stoi(FLAGS_index, nullptr, 0);
@@ -127,7 +112,14 @@ int main(int argc, char *argv[]) {
                 throw std::logic_error("Cannot open input camera: " + FLAGS_i + " index: " + FLAGS_index);
         } else if (FLAGS_i == "rs") {
             // realsense
-            setupRealSense();
+            std::cout << "librealsense - " << RS2_API_VERSION_STR << std::endl;
+            std::cout << "You have " << ctx.query_devices().size() << " RealSense devices connected" << std::endl;
+
+            rs2::config cfg;
+            pipe.start(cfg);
+
+            std::cout << "librealsense running!" << std::endl;
+
             isRealSenseMode = true;
         } else {
             if (!cap.open(FLAGS_i))
