@@ -30,12 +30,30 @@
 #define HOST ("127.0.0.1")
 #define PORT ("7400")
 
-#define STREAM          RS2_STREAM_INFRARED
-#define FORMAT          RS2_FORMAT_Y8
-#define WIDTH           640
-#define HEIGHT          480
-#define FPS             30
-#define STREAM_INDEX    1
+#define INPUT_IR
+
+#if defined(INPUT_COLOR)
+    #define STREAM          RS2_STREAM_COLOR
+    #define FORMAT          RS2_FORMAT_BGR8
+    #define WIDTH           640
+    #define HEIGHT          480
+    #define FPS             30
+    #define STREAM_INDEX    0
+#elif defined(INPUT_IR_RGB)
+    #define STREAM          RS2_STREAM_INFRARED
+    #define FORMAT          RS2_FORMAT_BGR8
+    #define WIDTH           640
+    #define HEIGHT          480
+    #define FPS             30
+    #define STREAM_INDEX    0
+#else
+    #define STREAM          RS2_STREAM_INFRARED
+    #define FORMAT          RS2_FORMAT_Y8
+    #define WIDTH           640
+    #define HEIGHT          480
+    #define FPS             30
+    #define STREAM_INDEX    1
+#endif
 
 using namespace InferenceEngine;
 using namespace human_pose_estimation;
@@ -216,7 +234,7 @@ int main(int argc, char *argv[]) {
             std::cout << "Frame Number: " << frame_number << std::endl;
 
             // copy to image
-            if(STREAM == RS2_STREAM_INFRARED) {
+            if(FORMAT == RS2_FORMAT_Y8) {
                 const unsigned char* ir_frame_data = (const unsigned char*)(rs2_get_frame_data(frame, &e));
                 check_error(e);
                 irImage = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC1, (void*)ir_frame_data, cv::Mat::AUTO_STEP);
@@ -245,7 +263,7 @@ int main(int argc, char *argv[]) {
 
         do {
             double t1 = static_cast<double>(cv::getTickCount());
-            if(STREAM == RS2_STREAM_INFRARED) {
+            if(FORMAT == RS2_FORMAT_Y8) {
                 cvtColor(irImage, image, cv::COLOR_GRAY2RGB);
             }
             std::vector <HumanPose> poses = estimator.estimate(image);
