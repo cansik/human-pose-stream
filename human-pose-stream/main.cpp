@@ -22,6 +22,8 @@
 #include "tnyosc.hpp"
 #include <boost/asio.hpp>
 
+#include <librealsense2/rs.hpp>
+
 // osc settings
 #define HOST ("127.0.0.1")
 #define PORT ("7400")

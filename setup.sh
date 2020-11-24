@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 echo "setting up your environment!"
-source /opt/intel/openvino/bin/setupvars.sh
+source /opt/intel/openvino_2020.1.023/bin/setupvars.sh
 
 # build
 sh ./build.sh

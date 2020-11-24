@@ -1,0 +1,9 @@
+.idea
+.DS_Store
+cmake-build-debug
+human-pose-estimation-0001.bin
+human-pose-estimation-0001.xml
+human_pose_stream
+libs/librealsense/librealsense2.2.40.0.dylib
+libs/librealsense/librealsense2.2.40.dylib
+libs/librealsense/librealsense2.dylib
