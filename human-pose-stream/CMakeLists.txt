@@ -8,5 +8,5 @@ file (GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
 ie_add_sample(NAME human_pose_stream
               SOURCES ${SOURCES}
               HEADERS ${HEADERS}
-              INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/../libs/librealsense/include"
+              INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/include"
               OPENCV_DEPENDENCIES highgui)

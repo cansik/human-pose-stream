@@ -187,12 +187,15 @@ macro(ie_add_sample)
     INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
     # realsense
-    set(RS2_LIBRARIES /Users/bildspur/git/human-pose-stream/libs/librealsense/librealsense2.dylib)
-    # find_package(realsense2 REQUIRED)
+    # set(RS2_LIBRARIES /Users/bildspur/git/human-pose-stream/libs/librealsense/librealsense2.dylib)
+    find_package(realsense2 REQUIRED)
+
+    # tbb
+    find_package(TBB REQUIRED)
 
     # global link
     target_link_libraries(${IE_SAMPLE_NAME} PRIVATE ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES}
-                                                    ${IE_SAMPLE_DEPENDENCIES} ${Boost_LIBRARIES} gflags ${RS2_LIBRARIES})
+                                                    ${IE_SAMPLE_DEPENDENCIES} ${Boost_LIBRARIES} gflags ${realsense2_LIBRARY})
 
     if(UNIX)
         target_link_libraries(${IE_SAMPLE_NAME} PRIVATE pthread)
