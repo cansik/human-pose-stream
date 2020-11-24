@@ -31,7 +31,7 @@
 #define PORT ("7400")
 
 #define STREAM          RS2_STREAM_COLOR
-#define FORMAT          RS2_FORMAT_RGB8
+#define FORMAT          RS2_FORMAT_BGR8
 #define WIDTH           640
 #define HEIGHT          480
 #define FPS             30
