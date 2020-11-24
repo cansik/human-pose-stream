@@ -194,6 +194,26 @@ int main(int argc, char *argv[]) {
             if (!cap.open(index))
                 throw std::logic_error("Cannot open input camera: " + FLAGS_i + " index: " + FLAGS_index);
         } else if (FLAGS_i == "rs") {
+            printf("setting sensor options...");
+            rs2_sensor_list* sensors = rs2_query_sensors(dev, &e);
+            check_error(e);
+            // 0 => Depth sensor
+            // 1 => Color Sensor (hopefully)
+            rs2_sensor* sensor = rs2_create_sensor(sensors, 0, &e);
+            check_error(e);
+            rs2_options* options =  (rs2_options*)sensor;
+            check_error(e);
+            // settings
+            rs2_set_option(options, RS2_OPTION_EMITTER_ENABLED, 0, &e);
+            //rs2_set_option(options, RS2_OPTION_ENABLE_AUTO_EXPOSURE, 0, &e);
+            //rs2_set_option(options, RS2_OPTION_EXPOSURE, 20 * 1000, &e);
+
+            // more options:
+            // https://intelrealsense.github.io/librealsense/doxygen/rs__option_8h.html#a8b9c011f705cfab20c7eaaa7a26040e2
+
+            check_error(e);
+            printf("done!");
+
             // Start the pipeline streaming
             // The retunred object should be released with rs2_delete_pipeline_profile(...)
             pipeline_profile = rs2_pipeline_start_with_config(pipeline, config, &e);
