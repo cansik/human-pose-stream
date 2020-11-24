@@ -27,7 +27,7 @@
 #include <librealsense2/h/rs_frame.h>
 
 // osc settings
-#define HOST ("127.0.0.1")
+#define HOST ("255.255.255.255")
 #define PORT ("7400")
 
 #define INPUT_IR
@@ -142,6 +142,10 @@ void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
 int main(int argc, char *argv[]) {
     try {
         std::cout << "InferenceEngine: " << GetInferenceEngineVersion() << std::endl;
+
+        // enable broadcast & address reuse
+        oscSocket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+        oscSocket.set_option(boost::asio::socket_base::broadcast(true));
 
         // ------------------------------ Parsing and validation of input args ---------------------------------
         if (!ParseAndCheckCommandLine(argc, argv)) {
