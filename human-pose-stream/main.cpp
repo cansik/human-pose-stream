@@ -22,12 +22,20 @@
 #include "tnyosc.hpp"
 #include <boost/asio.hpp>
 
-#include <librealsense2/rs.hpp>
-#include <librealsense2/hpp/rs_internal.hpp>
+#include <librealsense2/rs.h>
+#include <librealsense2/h/rs_pipeline.h>
+#include <librealsense2/h/rs_frame.h>
 
 // osc settings
 #define HOST ("127.0.0.1")
 #define PORT ("7400")
+
+#define STREAM          RS2_STREAM_COLOR
+#define FORMAT          RS2_FORMAT_RGB8
+#define WIDTH           640
+#define HEIGHT          480
+#define FPS             30
+#define STREAM_INDEX    0
 
 using namespace InferenceEngine;
 using namespace human_pose_estimation;
@@ -42,6 +50,27 @@ udp::resolver::iterator iterator = resolver.resolve(query);
 
 // realsense
 bool isRealSenseMode = false;
+
+void check_error(rs2_error* e)
+{
+    if (e)
+    {
+        printf("rs_error was raised when calling %s(%s):\n", rs2_get_failed_function(e), rs2_get_failed_args(e));
+        printf("    %s\n", rs2_get_error_message(e));
+        exit(EXIT_FAILURE);
+    }
+}
+
+void print_device_info(rs2_device* dev)
+{
+    rs2_error* e = 0;
+    printf("\nUsing device 0, an %s\n", rs2_get_device_info(dev, RS2_CAMERA_INFO_NAME, &e));
+    check_error(e);
+    printf("    Serial number: %s\n", rs2_get_device_info(dev, RS2_CAMERA_INFO_SERIAL_NUMBER, &e));
+    check_error(e);
+    printf("    Firmware version: %s\n\n", rs2_get_device_info(dev, RS2_CAMERA_INFO_FIRMWARE_VERSION, &e));
+    check_error(e);
+}
 
 bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     // ---------------------------Parsing and validation of input args--------------------------------------
@@ -103,21 +132,58 @@ int main(int argc, char *argv[]) {
 
         HumanPoseEstimator estimator(FLAGS_m, FLAGS_d, FLAGS_pc);
         cv::VideoCapture cap;
-        rs2::context ctx;
-        rs2::pipeline pipe(ctx);
+        rs2_error* e = 0;
+
+        rs2_context* ctx = rs2_create_context(RS2_API_VERSION, &e);
+        check_error(e);
+
+        /* Get a list of all the connected devices. */
+        // The returned object should be released with rs2_delete_device_list(...)
+        rs2_device_list* device_list = rs2_query_devices(ctx, &e);
+        check_error(e);
+
+        int dev_count = rs2_get_device_count(device_list, &e);
+        check_error(e);
+        printf("There are %d connected RealSense devices.\n", dev_count);
+        if (0 == dev_count)
+            return EXIT_FAILURE;
+
+        // Get the first connected device
+        // The returned object should be released with rs2_delete_device(...)
+        rs2_device* dev = rs2_create_device(device_list, 0, &e);
+        check_error(e);
+
+        print_device_info(dev);
+
+        // Create a pipeline to configure, start and stop camera streaming
+        // The returned object should be released with rs2_delete_pipeline(...)
+        rs2_pipeline* pipeline =  rs2_create_pipeline(ctx, &e);
+        check_error(e);
+
+        // Create a config instance, used to specify hardware configuration
+        // The retunred object should be released with rs2_delete_config(...)
+        rs2_config* config = rs2_create_config(&e);
+        check_error(e);
+
+        // Request a specific configuration
+        rs2_config_enable_stream(config, STREAM, STREAM_INDEX, WIDTH, HEIGHT, FORMAT, FPS, &e);
+        check_error(e);
+
+        rs2_pipeline_profile* pipeline_profile;
 
         if (FLAGS_i == "cam") {
             int index = std::stoi(FLAGS_index, nullptr, 0);
             if (!cap.open(index))
                 throw std::logic_error("Cannot open input camera: " + FLAGS_i + " index: " + FLAGS_index);
         } else if (FLAGS_i == "rs") {
-            // realsense
-            std::cout << "librealsense - " << RS2_API_VERSION_STR << std::endl;
-            std::cout << "You have " << ctx.query_devices().size() << " RealSense devices connected" << std::endl;
-
-            rs2::config cfg;
-            pipe.start(cfg);
-
+            // Start the pipeline streaming
+            // The retunred object should be released with rs2_delete_pipeline_profile(...)
+            pipeline_profile = rs2_pipeline_start_with_config(pipeline, config, &e);
+            if (e)
+            {
+                printf("The connected device doesn't support color streaming!\n");
+                exit(EXIT_FAILURE);
+            }
             std::cout << "librealsense running!" << std::endl;
 
             isRealSenseMode = true;
@@ -131,8 +197,32 @@ int main(int argc, char *argv[]) {
         int delay = 33;
         double inferenceTime = 0.0;
         cv::Mat image;
+
+        rs2_frame* frame;
+        rs2_frame* frames;
+
         if(isRealSenseMode) {
-            //todo: read realsense frame
+            frames = rs2_pipeline_wait_for_frames(pipeline, RS2_DEFAULT_TIMEOUT, &e);
+            check_error(e);
+
+            // just take first frame
+            frame = rs2_extract_frame(frames, 0, &e);
+            check_error(e);
+
+            const uint8_t* rgb_frame_data = (const uint8_t*)(rs2_get_frame_data(frame, &e));
+            check_error(e);
+
+            unsigned long long frame_number = rs2_get_frame_number(frame, &e);
+            check_error(e);
+
+            std::cout << "Frame Number: " << frame_number << std::endl;
+
+            // copy to image
+            image = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, (void*)rgb_frame_data, cv::Mat::AUTO_STEP);
+
+            //  maybe not necessary
+            rs2_release_frame(frame);
+            rs2_release_frame(frames);
         } else {
             if (!cap.read(image)) {
                 throw std::logic_error("Failed to get frame from cv::VideoCapture");
@@ -202,6 +292,19 @@ int main(int argc, char *argv[]) {
                 cap.read(image);
             }
         } while (true);
+
+        // Stop the pipeline streaming
+        rs2_pipeline_stop(pipeline, &e);
+        check_error(e);
+
+        // Release resources
+        rs2_delete_pipeline_profile(pipeline_profile);
+        rs2_delete_config(config);
+        rs2_delete_pipeline(pipeline);
+        rs2_delete_device(dev);
+        rs2_delete_device_list(device_list);
+        rs2_delete_context(ctx);
+
     }
     catch (const std::exception &error) {
         std::cerr << "[ ERROR ] " << error.what() << std::endl;
@@ -211,7 +314,6 @@ int main(int argc, char *argv[]) {
         std::cerr << "[ ERROR ] Unknown/internal exception happened." << std::endl;
         return EXIT_FAILURE;
     }
-
     std::cout << "Execution successful" << std::endl;
     return EXIT_SUCCESS;
 }
