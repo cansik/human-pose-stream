@@ -30,12 +30,12 @@
 #define HOST ("127.0.0.1")
 #define PORT ("7400")
 
-#define STREAM          RS2_STREAM_COLOR
-#define FORMAT          RS2_FORMAT_BGR8
+#define STREAM          RS2_STREAM_INFRARED
+#define FORMAT          RS2_FORMAT_Y8
 #define WIDTH           640
 #define HEIGHT          480
 #define FPS             30
-#define STREAM_INDEX    0
+#define STREAM_INDEX    1
 
 using namespace InferenceEngine;
 using namespace human_pose_estimation;
@@ -197,6 +197,7 @@ int main(int argc, char *argv[]) {
         int delay = 33;
         double inferenceTime = 0.0;
         cv::Mat image;
+        cv::Mat irImage;
 
         rs2_frame* frame;
         rs2_frame* frames;
@@ -209,16 +210,21 @@ int main(int argc, char *argv[]) {
             frame = rs2_extract_frame(frames, 0, &e);
             check_error(e);
 
-            const uint8_t* rgb_frame_data = (const uint8_t*)(rs2_get_frame_data(frame, &e));
-            check_error(e);
-
             unsigned long long frame_number = rs2_get_frame_number(frame, &e);
             check_error(e);
 
             std::cout << "Frame Number: " << frame_number << std::endl;
 
             // copy to image
-            image = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, (void*)rgb_frame_data, cv::Mat::AUTO_STEP);
+            if(STREAM == RS2_STREAM_INFRARED) {
+                const unsigned char* ir_frame_data = (const unsigned char*)(rs2_get_frame_data(frame, &e));
+                check_error(e);
+                irImage = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC1, (void*)ir_frame_data, cv::Mat::AUTO_STEP);
+                cvtColor(irImage, image, cv::COLOR_GRAY2RGB);
+            } else {
+                const uint8_t* rgb_frame_data = (const uint8_t*)(rs2_get_frame_data(frame, &e));
+                image = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, (void*)rgb_frame_data, cv::Mat::AUTO_STEP);
+            }
 
             //  maybe not necessary
             rs2_release_frame(frame);
@@ -239,6 +245,9 @@ int main(int argc, char *argv[]) {
 
         do {
             double t1 = static_cast<double>(cv::getTickCount());
+            if(STREAM == RS2_STREAM_INFRARED) {
+                cvtColor(irImage, image, cv::COLOR_GRAY2RGB);
+            }
             std::vector <HumanPose> poses = estimator.estimate(image);
             double t2 = static_cast<double>(cv::getTickCount());
             if (inferenceTime == 0) {
