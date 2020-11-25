@@ -30,6 +30,10 @@
 #define HOST ("255.255.255.255")
 #define PORT ("7400")
 
+// max osc pose's
+#define MAX_POSE 5
+
+// camera settings
 #define INPUT_IR
 
 #if defined(INPUT_COLOR)
@@ -122,6 +126,8 @@ void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
     bundle.append(posesMsg);
 
     for (HumanPose const &pose : poses) {
+        if(count >= MAX_POSE) break;
+
         // std::cout << "Score [" << count << "]: " << pose.score << std::endl;
         tnyosc::Message msg("/pose");
 
@@ -134,6 +140,7 @@ void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
         }
 
         bundle.append(msg);
+        count++;
     }
 
     oscSocket.send_to(boost::asio::buffer(bundle.data(), bundle.size()), *iterator);
@@ -156,41 +163,11 @@ int main(int argc, char *argv[]) {
         cv::VideoCapture cap;
         rs2_error* e = 0;
 
-        rs2_context* ctx = rs2_create_context(RS2_API_VERSION, &e);
-        check_error(e);
-
-        /* Get a list of all the connected devices. */
-        // The returned object should be released with rs2_delete_device_list(...)
-        rs2_device_list* device_list = rs2_query_devices(ctx, &e);
-        check_error(e);
-
-        int dev_count = rs2_get_device_count(device_list, &e);
-        check_error(e);
-        printf("There are %d connected RealSense devices.\n", dev_count);
-        if (0 == dev_count)
-            return EXIT_FAILURE;
-
-        // Get the first connected device
-        // The returned object should be released with rs2_delete_device(...)
-        rs2_device* dev = rs2_create_device(device_list, 0, &e);
-        check_error(e);
-
-        print_device_info(dev);
-
-        // Create a pipeline to configure, start and stop camera streaming
-        // The returned object should be released with rs2_delete_pipeline(...)
-        rs2_pipeline* pipeline =  rs2_create_pipeline(ctx, &e);
-        check_error(e);
-
-        // Create a config instance, used to specify hardware configuration
-        // The retunred object should be released with rs2_delete_config(...)
-        rs2_config* config = rs2_create_config(&e);
-        check_error(e);
-
-        // Request a specific configuration
-        rs2_config_enable_stream(config, STREAM, STREAM_INDEX, WIDTH, HEIGHT, FORMAT, FPS, &e);
-        check_error(e);
-
+        rs2_context* ctx;
+        rs2_device_list* device_list;
+        rs2_device* dev;
+        rs2_pipeline* pipeline;
+        rs2_config* config;
         rs2_pipeline_profile* pipeline_profile;
 
         if (FLAGS_i == "cam") {
@@ -198,6 +175,42 @@ int main(int argc, char *argv[]) {
             if (!cap.open(index))
                 throw std::logic_error("Cannot open input camera: " + FLAGS_i + " index: " + FLAGS_index);
         } else if (FLAGS_i == "rs") {
+            printf("starting rs...\n");
+            ctx = rs2_create_context(RS2_API_VERSION, &e);
+            check_error(e);
+
+            /* Get a list of all the connected devices. */
+            // The returned object should be released with rs2_delete_device_list(...)
+            device_list = rs2_query_devices(ctx, &e);
+            check_error(e);
+
+            int dev_count = rs2_get_device_count(device_list, &e);
+            check_error(e);
+            printf("There are %d connected RealSense devices.\n", dev_count);
+            if (0 == dev_count)
+                return EXIT_FAILURE;
+
+            // Get the first connected device
+            // The returned object should be released with rs2_delete_device(...)
+            dev = rs2_create_device(device_list, 0, &e);
+            check_error(e);
+
+            print_device_info(dev);
+
+            // Create a pipeline to configure, start and stop camera streaming
+            // The returned object should be released with rs2_delete_pipeline(...)
+            pipeline =  rs2_create_pipeline(ctx, &e);
+            check_error(e);
+
+            // Create a config instance, used to specify hardware configuration
+            // The retunred object should be released with rs2_delete_config(...)
+            config = rs2_create_config(&e);
+            check_error(e);
+
+            // Request a specific configuration
+            rs2_config_enable_stream(config, STREAM, STREAM_INDEX, WIDTH, HEIGHT, FORMAT, FPS, &e);
+            check_error(e);
+
             printf("setting sensor options...");
             rs2_sensor_list* sensors = rs2_query_sensors(dev, &e);
             check_error(e);
@@ -209,8 +222,9 @@ int main(int argc, char *argv[]) {
             check_error(e);
             // settings
             rs2_set_option(options, RS2_OPTION_EMITTER_ENABLED, 0, &e);
-            //rs2_set_option(options, RS2_OPTION_ENABLE_AUTO_EXPOSURE, 0, &e);
-            //rs2_set_option(options, RS2_OPTION_EXPOSURE, 20 * 1000, &e);
+            rs2_set_option(options, RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1, &e);
+            //rs2_set_option(options, RS2_OPTION_EXPOSURE, 5 * 1000, &e);
+            rs2_set_option(options, RS2_OPTION_GAIN, 100.0, &e);
 
             // more options:
             // https://intelrealsense.github.io/librealsense/doxygen/rs__option_8h.html#a8b9c011f705cfab20c7eaaa7a26040e2
@@ -236,13 +250,16 @@ int main(int argc, char *argv[]) {
 
         std::cout << "Started OSC client on port [" << PORT << "]" << std::endl;
 
-        int delay = 33;
+        int delay = 1000 / FPS;
         double inferenceTime = 0.0;
         cv::Mat image;
         cv::Mat irImage;
 
         rs2_frame* frame;
         rs2_frame* frames;
+
+        int numberOfFrames = (int)cap.get(cv::CAP_PROP_FRAME_COUNT);
+        int frameCounter = 0;
 
         if(isRealSenseMode) {
             frames = rs2_pipeline_wait_for_frames(pipeline, RS2_DEFAULT_TIMEOUT, &e);
@@ -287,7 +304,7 @@ int main(int argc, char *argv[]) {
 
         do {
             double t1 = static_cast<double>(cv::getTickCount());
-            if(FORMAT == RS2_FORMAT_Y8) {
+            if(isRealSenseMode && FORMAT == RS2_FORMAT_Y8) {
                 cvtColor(irImage, image, cv::COLOR_GRAY2RGB);
             }
             std::vector <HumanPose> poses = estimator.estimate(image);
@@ -338,8 +355,39 @@ int main(int argc, char *argv[]) {
 
             // read image
             if(isRealSenseMode) {
-                // todo: read realsense frame
+                // todo: remove this duplicated code!
+                frames = rs2_pipeline_wait_for_frames(pipeline, RS2_DEFAULT_TIMEOUT, &e);
+                check_error(e);
+
+                // just take first frame
+                frame = rs2_extract_frame(frames, 0, &e);
+                check_error(e);
+
+                unsigned long long frame_number = rs2_get_frame_number(frame, &e);
+                check_error(e);
+
+                // copy to image
+                if(FORMAT == RS2_FORMAT_Y8) {
+                    const unsigned char* ir_frame_data = (const unsigned char*)(rs2_get_frame_data(frame, &e));
+                    check_error(e);
+                    irImage = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC1, (void*)ir_frame_data, cv::Mat::AUTO_STEP);
+                    cvtColor(irImage, image, cv::COLOR_GRAY2RGB);
+                } else {
+                    const uint8_t* rgb_frame_data = (const uint8_t*)(rs2_get_frame_data(frame, &e));
+                    image = cv::Mat(cv::Size(WIDTH, HEIGHT), CV_8UC3, (void*)rgb_frame_data, cv::Mat::AUTO_STEP);
+                }
+
+                //  maybe not necessary
+                rs2_release_frame(frame);
+                rs2_release_frame(frames);
             } else {
+                // add a loop
+                frameCounter++;
+                if (frameCounter >= numberOfFrames) {
+                    frameCounter = 0;
+                    cap.set(cv::CAP_PROP_POS_FRAMES, 0);
+                }
+
                 cap.read(image);
             }
         } while (true);

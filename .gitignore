@@ -7,3 +7,5 @@ human_pose_stream
 libs/librealsense/librealsense2.2.40.0.dylib
 libs/librealsense/librealsense2.2.40.dylib
 libs/librealsense/librealsense2.dylib
+body.mp4
+posetest.mov
