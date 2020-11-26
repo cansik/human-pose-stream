@@ -192,7 +192,7 @@ macro(ie_add_sample)
     INCLUDE_DIRECTORIES(${realsense2_INCLUDE_DIR})
 
     # tbb
-    find_package(TBB REQUIRED)
+    find_package(TBB)
 
     # global link
     target_link_libraries(${IE_SAMPLE_NAME} PRIVATE ${OpenCV_LIBRARIES} ${InferenceEngine_LIBRARIES}
