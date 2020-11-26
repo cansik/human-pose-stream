@@ -9,4 +9,5 @@ libs/librealsense/librealsense2.2.40.dylib
 libs/librealsense/librealsense2.dylib
 body.mp4
 posetest.mov
+multiposetest.mov
 nohup.out
