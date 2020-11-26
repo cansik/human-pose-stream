@@ -30,6 +30,9 @@
 #define HOST ("255.255.255.255")
 #define PORT ("7400")
 
+#define FLIP_X false
+#define FLIP_Y false
+
 // max osc pose's
 #define MAX_POSE 5
 
@@ -293,6 +296,7 @@ int main(int argc, char *argv[]) {
                 throw std::logic_error("Failed to get frame from cv::VideoCapture");
             }
         }
+
         estimator.estimate(image);  // Do not measure network reshape, if it happened
 
         std::cout << "To close the application, press 'CTRL+C' here";
@@ -307,6 +311,15 @@ int main(int argc, char *argv[]) {
             if(isRealSenseMode && FORMAT == RS2_FORMAT_Y8) {
                 cvtColor(irImage, image, cv::COLOR_GRAY2RGB);
             }
+
+            if(FLIP_Y) {
+                cv::flip(image, image, 1);
+            }
+
+            if(FLIP_X) {
+                cv::flip(image, image, 0);
+            }
+
             std::vector <HumanPose> poses = estimator.estimate(image);
             double t2 = static_cast<double>(cv::getTickCount());
             if (inferenceTime == 0) {
