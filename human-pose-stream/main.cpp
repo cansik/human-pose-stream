@@ -27,7 +27,7 @@
 #include <librealsense2/h/rs_frame.h>
 
 // osc settings
-#define HOST ("255.255.255.255")
+#define HOST ("127.0.0.1")
 #define PORT ("7400")
 
 #define FLIP_X false
@@ -37,7 +37,12 @@
 #define MAX_POSE 5
 
 // camera settings
-#define INPUT_IR
+#define RS_EMITTER 0
+#define RS_AUTO_EXPOSURE 0
+#define RS_EXPOSURE (5 * 1000)
+#define RS2_GAIN 60.0
+
+#define INPUT_COLOR
 
 #if defined(INPUT_COLOR)
     #define STREAM          RS2_STREAM_COLOR
@@ -224,10 +229,12 @@ int main(int argc, char *argv[]) {
             rs2_options* options =  (rs2_options*)sensor;
             check_error(e);
             // settings
-            rs2_set_option(options, RS2_OPTION_EMITTER_ENABLED, 0, &e);
-            rs2_set_option(options, RS2_OPTION_ENABLE_AUTO_EXPOSURE, 1, &e);
-            //rs2_set_option(options, RS2_OPTION_EXPOSURE, 5 * 1000, &e);
-            rs2_set_option(options, RS2_OPTION_GAIN, 100.0, &e);
+            rs2_set_option(options, RS2_OPTION_EMITTER_ENABLED, RS_EMITTER, &e);
+            rs2_set_option(options, RS2_OPTION_ENABLE_AUTO_EXPOSURE, RS_AUTO_EXPOSURE, &e);
+            if(RS_AUTO_EXPOSURE == 0) {
+                rs2_set_option(options, RS2_OPTION_EXPOSURE, RS_EXPOSURE, &e);
+            }
+            rs2_set_option(options, RS2_OPTION_GAIN, RS2_GAIN, &e);
 
             // more options:
             // https://intelrealsense.github.io/librealsense/doxygen/rs__option_8h.html#a8b9c011f705cfab20c7eaaa7a26040e2
