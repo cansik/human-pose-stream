@@ -38,11 +38,11 @@
 
 // camera settings
 #define RS_EMITTER 0
-#define RS_AUTO_EXPOSURE 1
-#define RS_EXPOSURE (5 * 1000)
-#define RS2_GAIN 100.0
+#define RS_AUTO_EXPOSURE 0
+#define RS_EXPOSURE (25 * 1000)
+#define RS2_GAIN 50.0
 
-#define INPUT_COLOR
+#define INPUT_IR_RGB
 
 #if defined(INPUT_COLOR)
     #define STREAM          RS2_STREAM_COLOR
