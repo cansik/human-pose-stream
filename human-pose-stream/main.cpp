@@ -42,7 +42,7 @@
 #define RS_EXPOSURE (25 * 1000)
 #define RS2_GAIN 50.0
 
-#define INPUT_IR_RGB
+#define INPUT_COLOR
 
 #if defined(INPUT_COLOR)
     #define STREAM          RS2_STREAM_COLOR
