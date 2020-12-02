@@ -27,7 +27,7 @@
 #include <librealsense2/h/rs_frame.h>
 
 // osc settings
-#define HOST ("127.0.0.1")
+#define HOST ("192.168.50.255")
 #define PORT ("7400")
 
 #define FLIP_X false
@@ -151,7 +151,9 @@ void sendToOsc(const std::vector<HumanPose>& poses, float width, float height) {
         count++;
     }
 
-    oscSocket.send_to(boost::asio::buffer(bundle.data(), bundle.size()), *iterator);
+    if(count > 0) {
+        oscSocket.send_to(boost::asio::buffer(bundle.data(), bundle.size()), *iterator);
+    }
 }
 
 int main(int argc, char *argv[]) {
